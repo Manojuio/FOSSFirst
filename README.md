@@ -28,50 +28,46 @@ FOSSFirst orchestrates **4 specialized AI agents** (powered by Qwen2.5‑Coder) 
 
 ## 🔁 Execution Flow (LangGraph)
 
-The following diagram shows how nodes, edges, and conditional loops are organised in the LangGraph state machine.
-START
-│
-▼
-[1. FETCH ISSUES] ──GitHub API──▶ returns list of "good first issue"
-│
-▼
-[2. RANK ISSUES] ──Qwen2.5‑Coder──▶ adds difficulty scores (1‑10)
-│
-▼
-[3. HUMAN SELECT] ◀──── user picks an issue (interrupt)
-│
-▼
-[4. GET REPO TREE] ──GitHub API──▶ file tree (root level)
-│
-▼
-[5. MAP CODEBASE] ──Qwen2.5‑Coder──▶ suggests 1‑3 relevant file paths
-│
-▼
-[6. FETCH CONTENT] ──GitHub API──▶ raw source code of those files
-│
-▼
-[7. WRITE PATCH] ──Qwen2.5‑Coder──▶ generates unified diff
-│
-▼
-[8. TEST PATCH] ──sandbox (subprocess)──▶ passes/fails?
-│
-├──▶ if fail AND retries left (max 3) ──▶ loop back to step 7
-│
-└──▶ if pass ──▶ [9. FETCH CONTRIBUTING.md] ──GitHub API──▶ guidelines
-│
-▼
-[10. SIMULATE MAINTAINER] ──Qwen2.5‑Coder──▶ review feedback
-│
-▼
-[11. FINAL REPORT] ──aggregator──▶ verdict (ready / needs revision)
-│
-▼
-END
+The LangGraph state machine executes the following steps in order. The graph includes a conditional loop for patch testing and a human interrupt for issue selection.
 
-text
+Fetch Issues
+→ Calls GitHub API to find good first issue tickets for the selected language.
 
-> 💡 **Conditional edge**: The graph automatically retries the patch writer up to 3 times before falling back to the final report.  
-> **Human‑in‑the‑loop**: Execution pauses at step 3 until the user selects an issue.
+Rank Issues
+→ Uses Qwen2.5‑Coder:3b to assign a difficulty score (1–10) to each issue.
+
+Human Select (interrupt)
+→ Pauses execution and asks the user to pick one issue from the ranked list.
+
+Get Repo Tree
+→ Fetches the repository’s top‑level file tree (no cloning, just metadata).
+
+Map Codebase
+→ Qwen2.5‑Coder analyses the tree + issue → suggests 1‑3 relevant file paths.
+
+Fetch File Content
+→ Downloads the raw source code of the suggested files (only what is needed).
+
+Write Patch
+→ Qwen2.5‑Coder generates a unified diff (patch) to fix the issue.
+
+Test Patch
+→ Applies the patch in a temporary sandbox and runs a syntax/format check.
+
+If the test passes → continue to step 9.
+
+If the test fails → loop back to step 7 (up to 3 retries). After 3 failures, skip to step 11.
+
+Fetch Contributing Guidelines
+→ Retrieves CONTRIBUTING.md from the repository (if it exists).
+
+Simulate Maintainer
+→ Qwen2.5‑Coder reviews the patch against the issue + guidelines, producing structured feedback.
+
+Generate Final Report
+→ Aggregates all data and outputs a final verdict: Ready to submit / Needs revision / Uncertain.
+
+
 
 ---
 
