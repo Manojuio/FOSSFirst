@@ -183,5 +183,3 @@ MIT – feel free to use, modify, and share.
 LangGraph for agent orchestration
 
 Ollama and Qwen2.5‑Coder for local LLM
-
-GitHub for their free API
