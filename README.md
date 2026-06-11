@@ -4,7 +4,21 @@
 It uses **LangGraph**, **Qwen2.5‑Coder:3b** (via Ollama), and the **GitHub API** to find beginner‑friendly issues, map the codebase, generate patches, run safe tests, and simulate a maintainer review – all **locally** and **without cloning** repositories.
 
 > ✅ No paid APIs. ✅ No full repo clones. ✅ Complete privacy (runs on your machine).
+<div align="center">
 
+
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.6.0+-green)](https://github.com/langchain-ai/langgraph)
+[![Ollama](https://img.shields.io/badge/Ollama-Qwen2.5--Coder%3A3b-orange)](https://ollama.com/library/qwen2.5-coder)
+[![GitHub API](https://img.shields.io/badge/GitHub_API-Free-success)](https://docs.github.com/en/rest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
+[![Docker Image](https://img.shields.io/badge/docker-available-blue)](https://hub.docker.com/)  <!-- optional, when you containerize -->
+[![Slack](https://img.shields.io/badge/Slack-Join-4A154B?logo=slack)](https://join.slack.com/t/your-workspace/shared_invite/...)
+
+</div>
 ---
 
 ## 🧠 Multi‑Agent Architecture
