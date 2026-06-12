@@ -1,51 +1,68 @@
-# FOSSFirst
+# 🚀 FOSSFirst – Open Source Contribution Assistant
 
-> A terminal-native open-source contribution assistant that helps you find beginner-friendly issues, understand the likely change type, and prepare a contribution path from the browser.
+> **Terminal‑native + browser‑ready** — helps you find beginner‑friendly issues, understand the change type, and prepare a contribution path.
 
-FOSSFirst searches GitHub for `good first issue` tickets, ranks them by difficulty using a local LLM model via Ollama, drafts a patch workflow, and exposes both a CLI flow and a browser-based recommendation UI for exploring issues before you start coding.
+FOSSFirst searches GitHub for `good first issue` tickets, ranks them by difficulty using a **local LLM** (Qwen2.5‑Coder:3b via Ollama), drafts a patch workflow, and exposes both a **CLI flow** and a **browser‑based recommendation UI**.  
+No clones, no cloud LLM costs, no database – just your machine and GitHub’s free API.
 
-This repository is ready to push to GitHub on the `main` branch after installing dependencies and setting your local environment variables.
+[![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/downloads/)
+[![LangGraph](https://img.shields.io/badge/LangGraph-0.6.0+-green)](https://github.com/langchain-ai/langgraph)
+[![Ollama](https://img.shields.io/badge/Ollama-Qwen2.5--Coder%3A3b-orange)](https://ollama.com/library/qwen2.5-coder)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ![workflow](workflow.png)
 
 ---
 
-## Pipeline
+## 📋 Table of Contents
+
+- [Pipeline Overview](#pipeline-overview)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Project Layout](#project-layout)
+- [Configuration](#configuration)
+- [How the Verdict Works](#how-the-verdict-works)
+- [Notes & Limitations](#notes--limitations)
+- [License](#license)
+
+---
+
+## 🔁 Pipeline Overview
 
 | # | Node | What it does |
 |---|------|--------------|
-| 1 | `fetch_issues` | Queries the GitHub Search API for `label:"good first issue"` issues in the configured languages |
-| 2 | `rank_issues` | Qwen scores each issue on a 1–10 difficulty scale and gives a one-line reason |
-| 3 | `human_select` | **Interrupt** — you pick the issue to work on |
-| 4 | `get_tree` | Downloads the repo's root-level file tree |
-| 5 | `map_codebase` | Qwen picks the 1–3 files most likely to need editing |
-| 6 | `fetch_content` | Downloads the raw content of the top target file (falls back to `README.md`) |
-| 7 | `write_patch` | Qwen generates a unified diff |
-| 8 | `test_patch` | Sandbox validates diff format and runs `python -m py_compile` for `.py` files; retries up to `MAX_LOOP` times |
-| 9 | `fetch_guidelines` | Pulls `CONTRIBUTING.md` from the target repo |
-| 10 | `simulate_maintainer` | Qwen plays the role of a maintainer and emits a verdict |
-| 11 | `final_report` | Prints a structured summary |
+| 1️⃣ | `fetch_issues` | Queries GitHub Search API for `label:"good first issue"` in configured languages |
+| 2️⃣ | `rank_issues` | **Qwen** scores each issue (1–10 difficulty) + gives a one‑line reason |
+| 3️⃣ | `human_select` | ⏸️ **Interrupt** – you pick the issue to work on |
+| 4️⃣ | `get_tree` | Downloads repo root‑level file tree (no clone) |
+| 5️⃣ | `map_codebase` | **Qwen** picks 1–3 files most likely to need editing |
+| 6️⃣ | `fetch_content` | Downloads raw content of the top target file (falls back to `README.md`) |
+| 7️⃣ | `write_patch` | **Qwen** generates a unified diff (patch) |
+| 8️⃣ | `test_patch` | 🧪 Sandbox validates diff format + runs `python -m py_compile` for `.py` files – retries up to `MAX_LOOP` times |
+| 9️⃣ | `fetch_guidelines` | Pulls `CONTRIBUTING.md` from the target repo |
+| 🔟 | `simulate_maintainer` | **Qwen** acts as a maintainer and emits a verdict |
+| 1️⃣1️⃣ | `final_report` | 📄 Prints a structured summary + final verdict |
+
+> **Conditional loop** – if the patch fails the sandbox test, the system retries the patch writer up to 3 times.  
+> **Human‑in‑the‑loop** – execution pauses until you select an issue.
 
 ---
 
-## Prerequisites
+## 📦 Prerequisites
 
-- **Python 3.11+**
-- **[Ollama](https://ollama.com)** running locally with the model pulled:
+- ✅ **Python 3.11+**
+- ✅ **[Ollama](https://ollama.com)** running locally with the model pulled:
   ```bash
   ollama pull qwen2.5-coder:3b
-  ```
-- A **[GitHub personal access token](https://github.com/settings/tokens)** with the `public_repo` scope (used for the Search & Contents APIs)
+✅ A GitHub personal access token with the public_repo scope (used for Search & Contents APIs)
 
----
-
-## Installation
-
-```bash
+🛠️ Installation
+bash
 git clone <repo-url>
 cd FOSSFirst
 
-# (Recommended) install with uv — a uv.lock is checked in
+# 🧪 Recommended: install with uv (lock file provided)
 uv sync
 
 # …or with plain pip
@@ -53,146 +70,78 @@ python -m venv .venv
 .venv\Scripts\activate        # Windows
 # source .venv/bin/activate   # macOS / Linux
 pip install -r requirements.txt
-```
+Create a .env file in the project root:
 
-Create a `.env` file in the project root:
-
-```env
+env
 GITHUB_TOKEN=ghp_your_token_here
-```
-
----
-
-## Quick start
-
-### 1) Install dependencies
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate      # Windows
-# source .venv/bin/activate # macOS / Linux
-pip install -r requirements.txt
-```
-
-### 2) Configure the environment
-
-Create a `.env` file in the project root:
-
-```env
-GITHUB_TOKEN=your_github_token_here
-```
-
-### 3) Run the CLI workflow
-
-```bash
+🚀 Quick Start
+1️⃣ CLI workflow (full pipeline)
+bash
 python main.py
-```
-
-### 4) Run the backend API
-
-```bash
+2️⃣ FastAPI backend
+bash
 uvicorn backend.main:app --reload
-```
-
-### 5) Open the React recommendation UI
-
-Serve the UI from the repository root:
-
-```bash
+3️⃣ Browser recommendation UI
+bash
 python -m http.server 3000
-```
+Then open: http://127.0.0.1:3000/ui/react_interface.html
 
-Then open:
+🔌 API endpoints (all under /api/v1/)
+Method	Endpoint	Description
+POST	/issues/fetch	Fetch raw beginner issues
+POST	/issues/rank	Rank a set of issues
+POST	/contribution/prepare	Fetch + rank → returns session_id + ranked issues
+POST	/contribution/start	Start async job with selected issue
+GET	/contribution/status/{job_id}	Poll job status & result
+GET	/repositories/{owner}/{repo}/tree	Get top‑level file tree
+GET	/repositories/{owner}/{repo}/content	Get raw file content (query ?path=...)
+💡 The CLI and API share the same agents, tools, and graph – no duplication.
 
-- http://127.0.0.1:3000/ui/react_interface.html
-
-### FastAPI backend
-
-The project also exposes the same workflow as a REST API without changing the CLI:
-
-```bash
-uvicorn backend.main:app --reload
-```
-
-Useful API endpoints:
-
-- POST /api/v1/issues/fetch
-- POST /api/v1/issues/rank
-- POST /api/v1/contribution/prepare
-- POST /api/v1/contribution/start
-- GET /api/v1/contribution/status/{job_id}
-- GET /api/v1/repositories/{owner}/{repo}/tree
-- GET /api/v1/repositories/{owner}/{repo}/content
-
-The browser UI uses the same live issue fetch + ranking flow from the FastAPI backend and presents issue recommendations with difficulty labels and GitHub links. The CLI path still runs the full graph-based workflow for patch generation and review.
-
----
-
-## Project layout
-
-```
+📁 Project Layout
+text
 FOSSFirst/
-├── main.py                      # entry point — builds the graph and invokes it
-├── state.py                     # TypedDict describing the shared graph state
+├── main.py                      # CLI entry point – builds & runs the graph
+├── state.py                     # TypedDict for shared graph state
 ├── graph.py                     # LangGraph workflow + node functions
-├── final_report.py              # report formatter
-├── agents/
-│   ├── issue_ranker.py          # LLM difficulty scoring
-│   ├── codebase_mapper.py       # LLM file-tree → target paths
-│   ├── patch_writer.py          # LLM unified-diff generator
-│   └── maintainer_simulator.py  # LLM review against CONTRIBUTING.md
-├── tools/
-│   ├── github_api.py            # Search + Contents API client
-│   ├── sandbox.py               # patch format check + py_compile
-│   └── ollama_client.py         # shared LLM client (reserved)
-├── ui/
-│   ├── react_interface.html     # browser recommendation UI
-│   └── cli.py                   # interactive issue picker
-├── workflow.png                 # pipeline diagram
+├── final_report.py              # Report formatter & verdict logic
+├── agents/                      # 4 LLM‑based agents
+│   ├── issue_ranker.py
+│   ├── codebase_mapper.py
+│   ├── patch_writer.py
+│   └── maintainer_simulator.py
+├── tools/                       # Pure tool functions
+│   ├── github_api.py            # Search, contents, trees, guidelines
+│   ├── sandbox.py               # Patch validation + py_compile
+│   └── ollama_client.py         # Shared LLM client (reserved)
+├── ui/                          # User interfaces
+│   ├── cli.py                   # Interactive issue picker
+│   └── react_interface.html     # Browser recommendation UI
+├── backend/                     # FastAPI server (optional)
+├── workflow.png                 # Pipeline diagram
 ├── requirements.txt
 └── pyproject.toml
-```
+⚙️ Configuration
+Knob	Where to change	Default
+Languages to search	main.py – initial_state["languages"]	["python"]
+Max patch retries	graph.py – MAX_LOOP	3
+Issues per language	graph.py – limit_per_lang in fetch_beginner_issues	3
+LLM model	Each agent – OllamaLLM(model="qwen2.5-coder:3b")	qwen2.5-coder:3b
+🧠 How the Verdict Works
+final_report.py combines two signals:
 
----
+Patch tests	Maintainer says	Final verdict
+✅ pass	VERDICT: ready to submit	✅ READY TO SUBMIT
+✅ pass	VERDICT: needs revision	⚠️ NEEDS REVISION
+❌ fail (after retries)	—	❌ PATCH FAILED
+anything else	—	🤔 UNCLEAR
+📝 Notes & Limitations
+The sandbox validates the patch (format + syntax of the original file) but does not apply it; the maintainer simulator decides whether the diff would work.
 
-## Configuration
+The graph uses an InMemorySaver checkpointer so the human‑selection interrupt can resume cleanly on the same thread_id.
 
-A few knobs you can tweak:
+Everything runs against GitHub’s public API – no clones, no writes, no automatic PRs.
 
-- **Languages to search** — edit the `languages` list in `main.py`:
-  ```python
-  initial_state: State = {
-      "languages": ["python", "javascript", "rust"],
-      ...
-  }
-  ```
-- **Max patch retries** — change `MAX_LOOP` in `graph.py` (default `3`).
-- **Issues per language** — `limit_per_lang` argument to `fetch_beginner_issues` in `graph.py` (default `3`).
-- **LLM model** — every agent instantiates `OllamaLLM(model="qwen2.5-coder:3b")`; swap the model name to experiment.
+📄 License
+MIT – use it, share it, improve it.
 
----
-
-## How the verdict is decided
-
-`final_report.py` looks at two signals:
-
-| Patch tests | Maintainer says | Final verdict |
-|---|---|---|
-| ✅ pass | `VERDICT: ready to submit` | ✅ READY TO SUBMIT |
-| ✅ pass | `VERDICT: needs revision` | ⚠️ NEEDS REVISION |
-| ❌ fail (after retries) | — | ❌ PATCH FAILED |
-| anything else | — | 🤔 UNCLEAR |
-
----
-
-## Notes & limitations
-
-- The sandbox **validates** the patch (format + syntax of the original file) but does not actually apply it; the simulated maintainer step is what decides whether the diff "would" work.
-- The graph uses an `InMemorySaver` checkpointer so the human-selection interrupt can resume cleanly on the same `thread_id`.
-- Everything runs against GitHub's **public** API surface; no clones, no writes, no PRs are opened by FOSSFirst itself.
-
----
-
-## License
-
-MIT
+<div align="center"> Made with ❤️ for open‑source beginners and first‑time contributors. </div> ```
