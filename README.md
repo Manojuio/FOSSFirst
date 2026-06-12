@@ -100,26 +100,50 @@ GET	/repositories/{owner}/{repo}/content	Get raw file content (query ?path=...)
 📁 Project Layout
 text
 FOSSFirst/
-├── main.py                      # CLI entry point – builds & runs the graph
-├── state.py                     # TypedDict for shared graph state
-├── graph.py                     # LangGraph workflow + node functions
-├── final_report.py              # Report formatter & verdict logic
-├── agents/                      # 4 LLM‑based agents
-│   ├── issue_ranker.py
-│   ├── codebase_mapper.py
-│   ├── patch_writer.py
-│   └── maintainer_simulator.py
-├── tools/                       # Pure tool functions
-│   ├── github_api.py            # Search, contents, trees, guidelines
-│   ├── sandbox.py               # Patch validation + py_compile
-│   └── ollama_client.py         # Shared LLM client (reserved)
-├── ui/                          # User interfaces
-│   ├── cli.py                   # Interactive issue picker
-│   └── react_interface.html     # Browser recommendation UI
-├── backend/                     # FastAPI server (optional)
-├── workflow.png                 # Pipeline diagram
-├── requirements.txt
-└── pyproject.toml
+```
+├── 📁 agents
+│   ├── 🐍 __init__.py
+│   ├── 🐍 codebase_mapper.py
+│   ├── 🐍 issue_ranker.py
+│   ├── 🐍 maintainer_simulator.py
+│   └── 🐍 patch_writer.py
+├── 📁 backend
+│   ├── 📁 models
+│   │   ├── 🐍 __init__.py
+│   │   └── 🐍 schemas.py
+│   ├── 📁 routes
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 issues.py
+│   │   ├── 🐍 jobs.py
+│   │   └── 🐍 webhooks.py
+│   ├── 📁 services
+│   │   ├── 🐍 __init__.py
+│   │   └── 🐍 agent_orchestrator.py
+│   ├── 📁 utils
+│   │   ├── 🐍 __init__.py
+│   │   └── 🐍 job_store.py
+│   ├── 🐍 __init__.py
+│   └── 🐍 main.py
+├── 📁 tools
+│   ├── 🐍 __init__.py
+│   ├── 🐍 github_api.py
+│   └── 🐍 sandbox.py
+├── 📁 ui
+│   ├── 🐍 __init__.py
+│   ├── 🐍 cli.py
+│   └── 🌐 react_interface.html
+├── ⚙️ .gitignore
+├── 📝 README.md
+├── 🐍 final_report.py
+├── 🐍 graph.py
+├── 🐍 main.py
+├── ⚙️ pyproject.toml
+├── 📄 requirements.txt
+├── 🐍 state.py
+├── 📄 uv.lock
+└── 🖼️ workflow.png
+```
+
 ⚙️ Configuration
 Knob	Where to change	Default
 Languages to search	main.py – initial_state["languages"]	["python"]
