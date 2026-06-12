@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FOSSFirst Recommendation UI</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      :root { color-scheme: dark; font-family: Arial, Helvetica, sans-serif; background: #020617; color: #e5eefb; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: linear-gradient(135deg, #020617, #111827 45%, #172554); min-height: 100vh; }
+      .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+      .panel { background: rgba(15, 23, 42, 0.92); border: 1px solid #334155; border-radius: 18px; padding: 18px; box-shadow: 0 16px 38px rgba(8, 15, 30, 0.45); }
+      h1, h2, h3 { margin-top: 0; }
+      .muted { color: #cbd5e1; font-size: 13px; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      .chip { border: 1px solid #475569; border-radius: 999px; padding: 8px 12px; cursor: pointer; background: #0f172a; color: #e2e8f0; }
+      .chip.active { background: linear-gradient(135deg, #2563eb, #38bdf8); color: white; border-color: #60a5fa; }
+      input, button { border-radius: 12px; border: 1px solid #475569; padding: 10px 12px; font-size: 14px; }
+      input { background: #111827; color: #eff6ff; min-width: 260px; }
+      button { background: #2563eb; color: white; cursor: pointer; }
+      button:hover { background: #1d4ed8; }
+      .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
+      .card { border: 1px solid #1f2937; border-radius: 14px; padding: 14px; background: #111827; margin-bottom: 12px; }
+      .issue-card { cursor: pointer; transition: transform 120ms ease, border-color 120ms ease; }
+      .issue-card:hover { transform: translateY(-1px); border-color: #60a5fa; }
+      .issue-card.selected { border-color: #22d3ee; box-shadow: 0 0 0 1px #22d3ee inset; }
+      .badge { display: inline-block; font-size: 12px; border-radius: 999px; padding: 4px 8px; background: #1e293b; color: #bfdbfe; margin-right: 6px; }
+      .danger { color: #fca5a5; }
+      .success { color: #86efac; }
+      .empty { color: #cbd5e1; font-style: italic; }
+      pre { white-space: pre-wrap; background: #020617; border: 1px solid #1e293b; border-radius: 12px; padding: 12px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const API_BASE = 'http://127.0.0.1:8000';
+
+      const LEVELS = [
+        { key: 'beginner', label: 'Beginner', min: 1, max: 3 },
+        { key: 'intermediate', label: 'Intermediate', min: 4, max: 6 },
+        { key: 'advanced', label: 'Advanced', min: 7, max: 10 },
+      ];
+
+      function estimateDifficulty(issue) {
+        const text = `${issue.title || ''} ${issue.body_preview || ''}`.toLowerCase();
+        const fromModel = Number(issue.difficulty || 0);
+        if (Number.isFinite(fromModel) && fromModel >= 1 && fromModel <= 10) {
+          return fromModel;
+        }
+        if (/docs?|readme|example|guide|typo|documentation/.test(text)) return 2;
+        if (/test|coverage|lint|ci|flake|pytest/.test(text)) return 4;
+        if (/bug|fix|error|crash|exception|broken/.test(text)) return 5;
+        if (/feature|support|add|implement|new/.test(text)) return 6;
+        return 5;
+      }
+
+      function classifyChange(issue) {
+        const text = `${issue.title} ${issue.body_preview || ''}`.toLowerCase();
+        if (text.includes('doc') || text.includes('readme') || text.includes('example')) {
+          return { title: 'Documentation / example update', detail: 'This issue looks like a content or onboarding change. Update the docs, example, or guidance text and verify the example still matches the current behavior.' };
+        }
+        if (text.includes('test') || text.includes('coverage') || text.includes('lint')) {
+          return { title: 'Test or validation update', detail: 'This issue likely needs extra tests or validation logic. Add the missing scenario, run the checks, and confirm the edge case is covered.' };
+        }
+        if (text.includes('bug') || text.includes('error') || text.includes('fix')) {
+          return { title: 'Bug fix patch', detail: 'This issue points to a broken path or error case. Trace the failing flow, patch the code path, and validate the fix with the relevant tests.' };
+        }
+        if (text.includes('feature') || text.includes('support') || text.includes('add')) {
+          return { title: 'Feature implementation', detail: 'This issue looks like a new capability. Implement the feature in the affected module, then add a quick validation or example to prove it works.' };
+        }
+        return { title: 'General contribution', detail: 'Use the issue summary and repository context to identify the smallest safe change, then verify the affected path with tests or documentation.' };
+      }
+
+      function App() {
+        const [languages, setLanguages] = React.useState('python');
+        const [level, setLevel] = React.useState('beginner');
+        const [issues, setIssues] = React.useState([]);
+        const [selected, setSelected] = React.useState(null);
+        const [loading, setLoading] = React.useState(false);
+        const [error, setError] = React.useState('');
+
+        async function getRecommendations() {
+          setLoading(true);
+          setError('');
+          setSelected(null);
+          try {
+            const langList = languages.split(',').map(x => x.trim()).filter(Boolean);
+            if (!langList.length) {
+              throw new Error('Enter at least one language.');
+            }
+
+            const rawRes = await fetch(`${API_BASE}/api/v1/issues/fetch`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ languages: langList }),
+            });
+            const rawJson = await rawRes.json();
+            if (!rawRes.ok) throw new Error(rawJson.detail || 'Failed to fetch issues');
+
+            const rankedRes = await fetch(`${API_BASE}/api/v1/issues/rank`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ raw_issues: rawJson.issues || [] }),
+            });
+            const rankedJson = await rankedRes.json();
+            if (!rankedRes.ok) throw new Error(rankedJson.detail || 'Failed to rank issues');
+
+            const chosenLevel = LEVELS.find(item => item.key === level) || LEVELS[0];
+            const enriched = (rankedJson.ranked_issues || []).map(item => ({
+              ...item,
+              estimatedDifficulty: estimateDifficulty(item),
+              reason: item.reason || 'No reason provided by the ranker.',
+            }));
+
+            const filtered = enriched.filter(item => {
+              const d = item.estimatedDifficulty;
+              return d >= chosenLevel.min && d <= chosenLevel.max;
+            });
+
+            const fallback = filtered.length ? filtered : enriched.slice(0, 6);
+            setIssues(fallback);
+            if (!filtered.length) {
+              setError(`No strict ${chosenLevel.label.toLowerCase()} matches were returned, so the UI is showing the closest available recommendations instead.`);
+            }
+          } catch (e) {
+            setError(e.message || 'Unable to fetch recommendations.');
+            setIssues([]);
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        function pickIssue(item) {
+          setSelected(item);
+        }
+
+        const activeLevel = LEVELS.find(item => item.key === level) || LEVELS[0];
+        const changePlan = selected ? classifyChange(selected) : null;
+
+        return (
+          <div className="page">
+            <section className="panel" style={{ marginBottom: 18 }}>
+              <h1>FOSSFirst contribution recommendations</h1>
+              <p className="muted">Choose a difficulty band, fetch real GitHub issues, and click a result to see the likely change path and the issue link for solving it.</p>
+              <div className="row" style={{ marginBottom: 12 }}>
+                {LEVELS.map(item => (
+                  <button key={item.key} className={`chip ${level === item.key ? 'active' : ''}`} onClick={() => setLevel(item.key)}>
+                    {item.label} ({item.min}-{item.max})
+                  </button>
+                ))}
+              </div>
+              <div className="row">
+                <input value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="python, javascript" />
+                <button onClick={getRecommendations} disabled={loading}>{loading ? 'Loading…' : 'Get recommendations'}</button>
+              </div>
+              <p className="muted">Current band: <strong>{activeLevel.label}</strong> · Backend endpoint in use: <strong>{API_BASE}</strong> · This view uses the live issue fetch + ranking flow from the project API.</p>
+            </section>
+
+            <section className="grid">
+              <article className="panel">
+                <h2>Recommended issues</h2>
+                {error ? <p className="danger">{error}</p> : null}
+                {!loading && !issues.length && !error ? <p className="empty">Choose a level and fetch recommendations to see issue cards here.</p> : null}
+                {issues.map(item => (
+                  <article
+                    key={`${item.repo}-${item.number || item.title}`}
+                    className={`card issue-card ${selected && selected.title === item.title ? 'selected' : ''}`}
+                    onClick={() => pickIssue(item)}
+                  >
+                    <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ marginBottom: 6 }}>{item.title}</h3>
+                        <p className="muted" style={{ marginTop: 0 }}>{item.repo} · #{item.number || 'n/a'}</p>
+                      </div>
+                      <span className="badge">Difficulty {item.estimatedDifficulty || 5}</span>
+                    </div>
+                    <p className="muted" style={{ marginTop: 0 }}>{item.reason || 'No reason provided.'}</p>
+                    <p style={{ marginBottom: 8 }}>{item.body_preview || 'Preview unavailable.'}</p>
+                    {item.url ? (
+                      <p style={{ marginBottom: 0 }}>
+                        <a href={item.url} target="_blank" rel="noreferrer" style={{ color: '#93c5fd' }}>Open issue on GitHub →</a>
+                      </p>
+                    ) : null}
+                  </article>
+                ))}
+              </article>
+
+              <aside className="panel">
+                <h2>Selected issue action plan</h2>
+                {selected ? (
+                  <>
+                    <div className="card">
+                      <h3 style={{ marginBottom: 6 }}>{selected.title}</h3>
+                      <p className="muted" style={{ marginTop: 0 }}>{selected.repo}</p>
+                      <p><span className="badge">Difficulty {selected.estimatedDifficulty || selected.difficulty || 5}</span> <span className="badge">Language {selected.language || 'unknown'}</span></p>
+                      {selected.url ? <p><a href={selected.url} target="_blank" rel="noreferrer" style={{ color: '#93c5fd' }}>Open this GitHub issue directly →</a></p> : null}
+                    </div>
+                    <div className="card">
+                      <h3 style={{ marginBottom: 6 }}>{changePlan.title}</h3>
+                      <p>{changePlan.detail}</p>
+                      <ul>
+                        <li>Start from the file path or module most related to this issue.</li>
+                        <li>Make the smallest safe patch and verify it with the existing tests.</li>
+                        <li>Use the issue description as the acceptance checklist.</li>
+                      </ul>
+                    </div>
+                    <div className="card">
+                      <h3 style={{ marginBottom: 6 }}>Why this recommendation</h3>
+                      <pre>{JSON.stringify({
+                        title: selected.title,
+                        repo: selected.repo,
+                        difficulty: selected.estimatedDifficulty || selected.difficulty,
+                        reason: selected.reason,
+                        suggested_change: changePlan.title,
+                      }, null, 2)}</pre>
+                    </div>
+                  </>
+                ) : (
+                  <p className="empty">Select one recommendation to see the action plan and suggested change.</p>
+                )}
+              </aside>
+            </section>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+</html>

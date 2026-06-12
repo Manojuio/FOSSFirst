@@ -1,12 +1,23 @@
-# Python-generated files
+# Python caches and build artifacts
 __pycache__/
-*.py[oc]
+*.py[cod]
+*.pyo
+*.pyd
 build/
 dist/
 wheels/
-*.egg-info
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Virtual environments
-.venv
+# Virtual environments and local config
+.venv/
 .env
 .python-version
+
+# Editor and OS junk
+.vscode/
+.idea/
+.DS_Store
+*.log
